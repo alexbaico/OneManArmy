@@ -16,8 +16,9 @@ namespace MyGame.Classes
         public Animation currentAnimation;
         public Animation defaultAnimation;
         public Animation attackAnimation;
+        public int spriteMid;
 
-        public Character(int[] position, int lives, string spritePath, int speed, Animation defaultAnimation, Animation attackAnimation) {
+        public Character(int[] position, int lives, string spritePath, int speed, Animation defaultAnimation, Animation attackAnimation, int spriteWidth) {
             this.position = position;
             this.lives = lives;
             this.sprite = Engine.LoadImage(spritePath);
@@ -25,6 +26,7 @@ namespace MyGame.Classes
             this.defaultAnimation = defaultAnimation;
             this.currentAnimation = defaultAnimation;
             this.attackAnimation = attackAnimation;
+            this.spriteMid = spriteWidth / 2;
         }
 
         public void setSprite(string spritePath) {
@@ -32,7 +34,7 @@ namespace MyGame.Classes
         }
 
         public void Render() {
-            if(this.currentAnimation.Render(this.position[0], this.position[1]))
+            if(this.currentAnimation.Render(this.position[0] - spriteMid, this.position[1]))
             {
                 this.currentAnimation = defaultAnimation;
             }

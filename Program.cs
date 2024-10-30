@@ -31,11 +31,10 @@ namespace MyGame
         static Random enemyRandomDirection = new Random();
         static Random enemyRandomTime = new Random();
 
-        static Character player = new Character(new int[] { 512, 415 }, 4, "assets/spearguy/default/spearDefault1.png", 0, new Animation("assets/spearguy/default", "spearDefault", 4, true, 2000), new Animation("assets/spearguy/attack", "spear", 8, false, 1000));
+        static Character player = new Character(new int[] { 512, 415 }, 4, "assets/spearguy/default/idleR1.png", 0, new Animation("assets/spearguy/default", "idle", 4, true, 2000), new Animation("assets/spearguy/attack", "spear", 8, false, 1000), 150);
         static List<Character> enemies = new List<Character>();
 
         static int distanceToPunch = 80;
-        static int playerSpriteWidth = 76;
 
         static int cooldownTime = 100;
         static int cooldownMissTime = 300;
@@ -86,6 +85,21 @@ namespace MyGame
 
         static void CheckInputs()
         {
+
+            if (Engine.KeyPress(Engine.KEY_SPACE) && !pressed)
+            {
+                if (gameState == 0)
+                {
+                    gameState = 1;
+                }
+                if (gameState == 2)
+                {
+                    ResetGame();
+                    gameState = 0;
+                }
+                pressed = true;
+            }
+
             if (cooldown <= 0)
             {
                 if ((Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.MouseClick(Engine.MOUSE_LEFT, out mouseX, out mouseY)) && !pressed)
@@ -99,21 +113,9 @@ namespace MyGame
                     PunchRight();
                     pressed = true;
                 }
-                if(!(Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.KeyPress(Engine.KEY_RIGHT) || Engine.KeyPress(Engine.KEY_D)))
+                if(!(Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.KeyPress(Engine.KEY_RIGHT) || Engine.KeyPress(Engine.KEY_D) || Engine.KeyPress(Engine.KEY_SPACE)))
                 {
                     pressed = false;
-                }
-            }
-
-            if (Engine.KeyPress(Engine.KEY_SPACE))
-            {
-                if (gameState == 0)
-                {
-                    gameState = 1;
-                }
-                if (gameState == 2)
-                {
-                    gameState = 0;
                 }
             }
 
@@ -125,6 +127,13 @@ namespace MyGame
             {
                 Environment.Exit(0);
             }
+        }
+
+        private static void ResetGame()
+        {
+            enemies = new List<Character>();
+            cooldown = 0;
+            player.lives = 4;
         }
 
         private static void PunchRight()
@@ -172,8 +181,8 @@ namespace MyGame
         static void Update()
         {
 
-            enemyOnTheLeft = enemies.Where(enemy => player.position[0] - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
-            enemyOnTheRight = enemies.Where(enemy => player.position[0] + distanceToPunch + playerSpriteWidth > enemy.position[0] && player.position[0] + playerSpriteWidth < enemy.position[0]).FirstOrDefault();
+            enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
+            enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] + player.spriteMid < enemy.position[0]).FirstOrDefault();
 
             if (spawnTime > 0)
                 spawnTime -= delay;
@@ -185,7 +194,7 @@ namespace MyGame
                 spawnTime = enemySpawnTime + (enemyRandomTime.Next(2) == 0 ? enemyRandomTime.Next(150) : (enemyRandomTime.Next(350) * -1));
                 int xPos = enemyRandomDirection.Next(2) == 0 ? (0 - 100) : (1024 + 100);
                 int enemySpeed = delay / 2 * (xPos <= 0 ? 1 : -1); //Enemy speed direction
-                enemies.Add(new Character(new int[] { xPos, player.position[1] + 30 }, 1, "assets/personaje-anim-1.gif", enemySpeed, new Animation("assets", "slime", 1, true, 500), new Animation("assets", "slime", 1, true, 500)));
+                enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, "assets/personaje-anim-1.gif", enemySpeed, new Animation("assets", "slime", 1, true, 500), new Animation("assets", "slime", 1, true, 500), 64));
             }
 
 
@@ -235,6 +244,10 @@ namespace MyGame
 
                         RenderMeters();
 
+                        //DEBUG
+                        Engine.DrawText("|", player.position[0], player.position[1] , 0, 255, 0, fuente);
+
+
                         break;
                     }
                 case 2:
@@ -260,12 +273,12 @@ namespace MyGame
                 {
                     meterRCounter++;
                 }
-                Engine.Draw(meterR[meterRCounter], player.position[0] + 50, player.position[1] + 70);
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15 , player.position[1] + 70);
             }
             else
             {
                 meterRCounter = 0;
-                Engine.Draw(meterR[0], player.position[0] + 50, player.position[1] + 70);
+                Engine.Draw(meterR[0], player.position[0] + 15, player.position[1] + 70);
 
             }
 
@@ -275,12 +288,12 @@ namespace MyGame
                 {
                     meterLCounter++;
                 }
-                Engine.Draw(meterL[meterLCounter], player.position[0] - 100, player.position[1] + 70);
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 70);
             }
             else
             {
                 meterLCounter = 0;
-                Engine.Draw(meterL[0], player.position[0] - 100, player.position[1] + 70);
+                Engine.Draw(meterL[0], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 70);
             }
 
             Engine.Draw(meterLives[player.lives], 0,0);

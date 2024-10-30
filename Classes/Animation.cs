@@ -21,8 +21,8 @@ namespace MyGame.Classes
             this.spritesRight = new Image[spritesAmount];
             this.spritesLeft = new Image[spritesAmount];
             for (int i = 1; i <= spritesAmount; i++) {
-                spritesRight[i-1] = Engine.LoadImage(folder + "/" + spriteName + i+".png");
-                spritesLeft[i-1] = Engine.LoadImage(folder + "/" + spriteName + "M" + i+".png");
+                spritesRight[i-1] = Engine.LoadImage(folder + "/" + spriteName + "R" + i +".png");
+                spritesLeft[i-1] = Engine.LoadImage(folder + "/" + spriteName + "L" + i+".png");
             }
             this.spritesCount = 0;
             this.loop = loop;
