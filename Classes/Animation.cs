@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace MyGame.Classes
 {
+
+
     internal class Animation
     {
         public int amountSprites;
@@ -16,8 +18,10 @@ namespace MyGame.Classes
         public bool rightDirection;
         public bool loop;
         public int animDuration;
+        public int[] offsetX;
+        public int offsetY;
 
-        public Animation(string folder, string spriteName, int spritesAmount, bool loop, int animDuration) {
+        public Animation(string folder, string spriteName, int spritesAmount, bool loop, int animDuration, int[] offsetX, int offsetY) {
             this.spritesRight = new Image[spritesAmount];
             this.spritesLeft = new Image[spritesAmount];
             for (int i = 1; i <= spritesAmount; i++) {
@@ -28,6 +32,14 @@ namespace MyGame.Classes
             this.loop = loop;
             this.animDuration = animDuration;
             spritesRotationTime = animDuration / Program.delay / spritesAmount;
+            this.offsetX = offsetX;
+            this.offsetY = offsetY;
+        }
+
+        public void resetAnimation() { 
+            this.spritesCount = 0;
+            this.rightDirection = true;
+            spritesRotationTime = animDuration / Program.delay / spritesRight.Length;
         }
 
         public bool Render(int x, int y) {
@@ -48,7 +60,14 @@ namespace MyGame.Classes
                     return true;
                 }
             }
-            Engine.Draw(rightDirection ? spritesRight[spritesCount] : spritesLeft[spritesCount], x, y);
+            if (rightDirection)
+            {
+                Engine.Draw(spritesRight[spritesCount], x + offsetX[1], y + offsetY);
+            }
+            else 
+            { 
+                Engine.Draw(spritesLeft[spritesCount], x + offsetX[0], y + offsetY);
+            }
             return false;
         }
 
