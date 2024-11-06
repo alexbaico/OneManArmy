@@ -13,7 +13,6 @@ namespace MyGame.Classes
         public int[] position = new int[2];
         public int lives;
         public int speed;
-        public Image sprite;
         public Animation currentAnimation;
         public Animation defaultAnimation;
         public Animation attackAnimation;
@@ -22,10 +21,9 @@ namespace MyGame.Classes
         public int spriteMid;
         private Animation[] atkEffects;
 
-        public Character(int[] position, int lives, string spritePath, int speed, Animation defaultAnimation, Animation attackAnimation, int spriteWidth, Animation[] atkEffects, Animation hitAnimation, Animation deathAnimation) {
+        public Character(int[] position, int lives, int speed, int spriteWidth, Animation defaultAnimation, Animation attackAnimation, Animation[] atkEffects, Animation hitAnimation, Animation deathAnimation) {
             this.position = position;
             this.lives = lives;
-            this.sprite = Engine.LoadImage(spritePath);
             this.speed = speed;
             this.defaultAnimation = defaultAnimation;
             this.currentAnimation = defaultAnimation;
@@ -36,11 +34,10 @@ namespace MyGame.Classes
             this.atkEffects = atkEffects;
         }
 
-        public void setSprite(string spritePath) {
-            this.sprite = Engine.LoadImage(spritePath);
-        }
-
         public bool Render() {
+            if (currentAnimation == deathAnimation && currentAnimation.Render(this.position[0] - spriteMid, this.position[1])) { 
+                return true;
+            }
             if (currentAnimation == attackAnimation && atkEffects.Length > 0)
             {
                 Random random = new Random();

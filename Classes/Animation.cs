@@ -10,7 +10,6 @@ namespace MyGame.Classes
 
     internal class Animation
     {
-        public int amountSprites;
         public Image[] spritesRight;
         public Image[] spritesLeft;
         public int spritesCount;
@@ -21,19 +20,16 @@ namespace MyGame.Classes
         public int[] offsetX;
         public int offsetY;
 
-        public Animation(string folder, string spriteName, int spritesAmount, bool loop, int animDuration, int[] offsetX, int offsetY) {
-            this.spritesRight = new Image[spritesAmount];
-            this.spritesLeft = new Image[spritesAmount];
-            for (int i = 1; i <= spritesAmount; i++) {
-                spritesRight[i-1] = Engine.LoadImage(folder + "/" + spriteName + "R" + i +".png");
-                spritesLeft[i-1] = Engine.LoadImage(folder + "/" + spriteName + "L" + i+".png");
-            }
+        public Animation(Image[] spritesRight, Image[] spritesLeft, bool loop, int animDuration, int[] offsetX, int offsetY, bool rightDirection) {
+            this.spritesRight = spritesRight;
+            this.spritesLeft = spritesLeft;
             this.spritesCount = 0;
             this.loop = loop;
             this.animDuration = animDuration;
-            spritesRotationTime = animDuration / Program.delay / spritesAmount;
+            spritesRotationTime = animDuration / Program.delay / spritesRight.Length;
             this.offsetX = offsetX;
             this.offsetY = offsetY;
+            this.rightDirection = rightDirection;
         }
 
         public void resetAnimation() { 
@@ -51,13 +47,11 @@ namespace MyGame.Classes
             }
             if (spritesCount == spritesRight.Length)
             {
-                if (loop)
+                spritesCount = 0;
+                if (!loop)
                 {
-                    spritesCount = 0;
-                } else
-                {
-                    spritesCount = 0;
                     return true;
+
                 }
             }
             if (rightDirection)

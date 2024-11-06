@@ -11,7 +11,7 @@ namespace MyGame
     class Program
     {
 
-        static Image background = Engine.LoadImage("assets/backs/" + (new Random().Next(9) + 1) + ".jpg");
+        static Image background = Engine.LoadImage("assets/backs/" + (new Random().Next(7) + 1) + ".jpg");
         static Image[] meterL;
         static int meterLCounter = 0;
         static Image[] meterR;
@@ -33,6 +33,8 @@ namespace MyGame
 
         static Character player;
         static List<Character> enemies = new List<Character>();
+        static List<Character> deadEnemies = new List<Character>();
+        static List<Character> inactiveEnemies = new List<Character>();
 
         static int distanceToPunch = 80;
 
@@ -51,9 +53,10 @@ namespace MyGame
         static Character enemyOnTheRight = null;
 
         static bool playerHitted = false;
-        static int playerHittedTime = 200;
+        static int playerHittedTime = 700;
 
         static bool tutorial = true;
+        static Random enemyRandom = new Random();
 
         static void Main(string[] args)
         {
@@ -75,9 +78,9 @@ namespace MyGame
 
         private static void initializePlayer()
         {
-            Animation[] attkEffects = new Animation[] { new Animation("assets/effects/atk1", "atk", 8, false, 2000, new int[] { -140, 70 }, 10) };
-            player = new Character(new int[] { 512, 415 }, 4, "assets/spearguy/default/idleR1.png", 0, new Animation("assets/spearguy/default", "idle", 4, true, 2000, new int[] { 0, 0 }, 0), 
-                new Animation("assets/spearguy/attack", "spear", 8, false, 1000, new int[] { 0, 0 }, 0), 150, attkEffects, new Animation("assets/spearguy/hit", "hit", 4, false, 1000, new int[] { 0, 0 }, 0), new Animation("assets/spearguy/death", "death", 6, false, 1000, new int[] { 0, 0 }, 0));
+            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 2000, new int[] { -140, 70 }, 10, false) };
+            player = new Character(new int[] { 512, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 2000, new int[] { 0, 0 }, 0, false), 
+                new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 1000, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 2000, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
 
         private static void initializeMeters(out Image[] meterL, out Image[] meterR, out Image[] meterLives)
@@ -147,6 +150,7 @@ namespace MyGame
             enemies = new List<Character>();
             cooldown = 0;
             player.lives = 4;
+            tutorial = true;
         }
 
         private static void PunchRight()
@@ -158,6 +162,8 @@ namespace MyGame
                 enemyOnTheRight.lives--;
                 if (enemyOnTheRight.lives <= 0)
                 {
+                    deadEnemies.Add(enemyOnTheRight);
+                    enemyOnTheRight.GetHit();
                     enemies.Remove(enemyOnTheRight);
                     enemyOnTheRight = null;
                 }
@@ -183,6 +189,8 @@ namespace MyGame
                 enemyOnTheLeft.lives--;
                 if (enemyOnTheLeft.lives <= 0)
                 {
+                    deadEnemies.Add(enemyOnTheLeft);
+                    enemyOnTheLeft.GetHit();
                     enemies.Remove(enemyOnTheLeft);
                     enemyOnTheLeft = null;
                 }
@@ -197,9 +205,10 @@ namespace MyGame
 
         static void Update()
         {
+            inactiveEnemies.ForEach(enemy => deadEnemies.Remove(enemy));
 
             enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
-            enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] + player.spriteMid < enemy.position[0]).FirstOrDefault();
+            enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] < enemy.position[0]).FirstOrDefault();
 
             SpawnEnemy();
 
@@ -218,7 +227,7 @@ namespace MyGame
                 {
                     if (playerHitted && playerHittedTime > 0)
                     {
-                        enemy.position[0] -= enemy.speed / 4;
+                        enemy.position[0] -= enemy.speed / 2;
                     }
                     else
                     {
@@ -230,10 +239,15 @@ namespace MyGame
 
         private static void SpawnEnemy()
         {
-            if (spawnTime > 0)
-                spawnTime -= delay;
             if (cooldown > 0)
                 cooldown -= delay;
+            if (playerHitted) 
+            {
+                return;
+            }
+            if (spawnTime > 0)
+                spawnTime -= delay;
+
             /* random appearance logic condition here {}*/
             if (spawnTime <= 0 && player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
             {
@@ -250,21 +264,20 @@ namespace MyGame
                     }
                 }
                 int enemySpeed = delay / 2 * (xPos <= 0 ? 1 : -1); //Enemy speed direction
-                enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, "assets/personaje-anim-1.gif", enemySpeed, new Animation("assets", "slime", 1, true, 500, new int[] { 0, 0 }, 0), new Animation("assets", "slime", 1, true, 500, new int[] { 0, 0 }, 0), 64, new Animation[] { },
-                    new Animation("assets", "slime", 1, true, 500, new int[] { 0, 0 }, 0), new Animation("assets", "slime", 1, true, 500, new int[] { 0, 0 }, 0)));
+                int enemyRandomAsset = enemyRandom.Next(2);
+                enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, enemySpeed, 150, new Animation(AssetsUtils.assets.enemiesWalkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesWalkLImages[enemyRandomAsset], true, 3000, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesAtkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesAtkLImages[enemyRandomAsset], false, 700, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation[] { },
+                    new Animation(AssetsUtils.assets.enemiesIdleRImages[enemyRandomAsset], AssetsUtils.assets.enemiesIdleLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesDeathRImages[enemyRandomAsset], AssetsUtils.assets.enemiesDeathLImages[enemyRandomAsset], false, 5000, new int[] { 0, 0 }, 0, enemySpeed > 0)));
             }
         }
 
         static void EnemyHitsPlayer() {
-            Character enemyHitsPlayer = enemies.Where(enemy => enemy.position[0] < player.position[0] + 15 && enemy.position[0] > player.position[0] - 15).FirstOrDefault();
-            if (enemyHitsPlayer != null)
+            Character enemyHitsPlayer = enemies.Where(enemy => enemy.position[0] < player.position[0] + 35 && enemy.position[0] > player.position[0] - 35).FirstOrDefault();
+            if (enemyHitsPlayer != null && !playerHitted)
             {
                 player.GetHit();
-                enemies.Remove(enemyHitsPlayer);
+                enemyHitsPlayer.attack(enemyHitsPlayer.speed > 0);
                 playerHitted = true;
-                playerHittedTime = 500;
-                /*TODO Actually hacerlo retroceder*/
-                //TODO AND STOP MOVEMENT?
+                playerHittedTime = 700;
             }
 
             if (playerHitted)
@@ -302,10 +315,20 @@ namespace MyGame
                             //DEBUG POSITION
                             Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
                         });
+                        deadEnemies.ForEach(enemy =>
+                        {
+                            //Draw dead enemies
+                            if (enemy.Render()) {
+                                inactiveEnemies.Add(enemy);
+                            }
+                            
+                            //DEBUG POSITION
+                            Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
+                        });
                         //DEBUG SPAWNTIME
                         Engine.DrawText("" + spawnTime, 0, 100, 0, 255, 0, fuente);
                         //DEBUG COOLDOWN
-                        Engine.DrawText("cool " + cooldown, player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
+                        Engine.DrawText("" + player.position[0], player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
 
                         RenderMeters();
 
@@ -349,12 +372,12 @@ namespace MyGame
                 {
                     meterRCounter++;
                 }
-                Engine.Draw(meterR[meterRCounter], player.position[0] + 15 , player.position[1] + 90);
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15 , player.position[1] + 75);
             }
             else
             {
                 meterRCounter = 0;
-                Engine.Draw(meterR[0], player.position[0] + 15, player.position[1] + 90);
+                Engine.Draw(meterR[0], player.position[0] + 15, player.position[1] + 75);
 
             }
 
@@ -364,12 +387,12 @@ namespace MyGame
                 {
                     meterLCounter++;
                 }
-                Engine.Draw(meterL[meterLCounter], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 90);
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 75);
             }
             else
             {
                 meterLCounter = 0;
-                Engine.Draw(meterL[0], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 90);
+                Engine.Draw(meterL[0], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 75);
             }
 
             Engine.Draw(meterLives[player.lives], 0,0);
