@@ -34,6 +34,24 @@ namespace MyGame.Classes
             this.atkEffects = atkEffects;
         }
 
+        public void ResetChar(int[] position, int lives, int speed) {
+            this.position = position;
+            this.lives = lives;
+            this.speed = speed;
+            this.defaultAnimation.rightDirection = speed > 0;
+            this.currentAnimation.rightDirection = speed > 0;
+            this.attackAnimation.rightDirection = speed > 0;
+            this.hitAnimation.rightDirection = speed > 0;
+            this.deathAnimation.rightDirection = speed > 0;
+
+            this.defaultAnimation.spritesCount = 0;
+            this.currentAnimation.spritesCount = 0;
+            this.attackAnimation.spritesCount = 0;
+            this.hitAnimation.spritesCount = 0;
+            this.deathAnimation.spritesCount = 0;
+            this.currentAnimation = defaultAnimation;
+        }
+
         public bool Render() {
             if (currentAnimation == deathAnimation && currentAnimation.Render(this.position[0] - spriteMid, this.position[1])) { 
                 return true;

@@ -10,26 +10,24 @@ namespace MyGame
 
     class Program
     {
-
-        static Image background = Engine.LoadImage("assets/backs/" + (new Random().Next(7) + 1) + ".jpg");
+        static Random random = new Random();
+        static Image background = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
         static Image[] meterL;
         static int meterLCounter = 0;
         static Image[] meterR;
         static int meterRCounter = 0;
         static Image[] meterLives;
 
-        public static int delay = 10;
+        static DateTime lastTime = DateTime.Now;
+        public static int lastFrameTime = 0;
+
+        static int delay = 10;
         static int gameState = 0;
 
-        static int gravity = delay * 2;
-        static int jumpSpeedInitial = delay * 2;
-        static int jumpSpeedForce = 2;
-        static int jumpSpeed = 0;
-
         static int spawnTime = 2000;
-        static int enemySpawnTime = 500;
-        static Random enemyRandomDirection = new Random();
-        static Random enemyRandomTime = new Random();
+        static int enemySpawnTime = 550;
+        static int enemyBaseSpeed = 7;
+        static int difficulty = 2;
 
         static Character player;
         static List<Character> enemies = new List<Character>();
@@ -38,7 +36,7 @@ namespace MyGame
 
         static int distanceToPunch = 80;
 
-        static int cooldownTime = 100;
+        static int cooldownTime = 50;
         static int cooldownMissTime = 300;
         static int cooldown = 0;
 
@@ -53,10 +51,13 @@ namespace MyGame
         static Character enemyOnTheRight = null;
 
         static bool playerHitted = false;
-        static int playerHittedTime = 700;
+        static int playerHittedTime = 1;
 
         static bool tutorial = true;
-        static Random enemyRandom = new Random();
+        static int enemiesObjective = 100;
+        static int enemiesKillCount = 0;
+
+
 
         static void Main(string[] args)
         {
@@ -78,9 +79,9 @@ namespace MyGame
 
         private static void initializePlayer()
         {
-            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 2000, new int[] { -140, 70 }, 10, false) };
-            player = new Character(new int[] { 512, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 2000, new int[] { 0, 0 }, 0, false), 
-                new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 1000, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 2000, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
+            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -140, 70 }, 10, false) };
+            player = new Character(new int[] { 512, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
+                new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 200, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 400, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
 
         private static void initializeMeters(out Image[] meterL, out Image[] meterR, out Image[] meterLives)
@@ -108,7 +109,7 @@ namespace MyGame
                 {
                     gameState = 1;
                 }
-                if (gameState == 2)
+                if (gameState == 2 || gameState == 3)
                 {
                     ResetGame();
                     gameState = 0;
@@ -116,7 +117,7 @@ namespace MyGame
                 pressed = true;
             }
 
-            if (cooldown <= 0)
+            if (cooldown <= 0 && player.lives > 0 && playerHittedTime - 200 < 0)
             {
                 if ((Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.MouseClick(Engine.MOUSE_LEFT, out mouseX, out mouseY)) && !pressed)
                 {
@@ -166,6 +167,10 @@ namespace MyGame
                     enemyOnTheRight.GetHit();
                     enemies.Remove(enemyOnTheRight);
                     enemyOnTheRight = null;
+                    if (!tutorial)
+                    {
+                        enemiesKillCount++;
+                    }
                 }
                 cooldown = cooldownTime;
                 if (tutorial)
@@ -193,6 +198,10 @@ namespace MyGame
                     enemyOnTheLeft.GetHit();
                     enemies.Remove(enemyOnTheLeft);
                     enemyOnTheLeft = null;
+                    if (!tutorial)
+                    {
+                        enemiesKillCount++;
+                    }
                 }
                 cooldown = cooldownTime;
 
@@ -205,6 +214,14 @@ namespace MyGame
 
         static void Update()
         {
+            if(enemiesKillCount >= enemiesObjective)
+            {
+                gameState = 3;
+            }
+
+            lastFrameTime = (int)(DateTime.Now - lastTime).TotalMilliseconds;
+            lastTime = DateTime.Now;
+
             inactiveEnemies.ForEach(enemy => deadEnemies.Remove(enemy));
 
             enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
@@ -240,19 +257,17 @@ namespace MyGame
         private static void SpawnEnemy()
         {
             if (cooldown > 0)
-                cooldown -= delay;
+                cooldown -= lastFrameTime;
             if (playerHitted) 
-            {
                 return;
-            }
             if (spawnTime > 0)
-                spawnTime -= delay;
+                spawnTime -= lastFrameTime;
 
             /* random appearance logic condition here {}*/
             if (spawnTime <= 0 && player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
             {
-                spawnTime = enemySpawnTime + (enemyRandomTime.Next(2) == 0 ? enemyRandomTime.Next(150) : (enemyRandomTime.Next(350) * -1));
-                int xPos = enemyRandomDirection.Next(2) == 0 ? (0 - 100) : (1024 + 100);
+                spawnTime = enemySpawnTime + (random.Next(2) == 0 ? random.Next(150) : (random.Next(350) * -1)) - 50 * difficulty;
+                int xPos = random.Next(2) == 0 ? (0 - 100) : (1024 + 100);
                 if (tutorial && enemies.Count < 2)
                 {
                     if(enemies.Count < 1)
@@ -263,26 +278,36 @@ namespace MyGame
                         xPos = 1024 + 100;
                     }
                 }
-                int enemySpeed = delay / 2 * (xPos <= 0 ? 1 : -1); //Enemy speed direction
-                int enemyRandomAsset = enemyRandom.Next(2);
-                enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, enemySpeed, 150, new Animation(AssetsUtils.assets.enemiesWalkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesWalkLImages[enemyRandomAsset], true, 3000, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesAtkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesAtkLImages[enemyRandomAsset], false, 700, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation[] { },
-                    new Animation(AssetsUtils.assets.enemiesIdleRImages[enemyRandomAsset], AssetsUtils.assets.enemiesIdleLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesDeathRImages[enemyRandomAsset], AssetsUtils.assets.enemiesDeathLImages[enemyRandomAsset], false, 5000, new int[] { 0, 0 }, 0, enemySpeed > 0)));
+                int enemySpeed = enemyBaseSpeed / 2 * (xPos <= 0 ? 1 : -1) * difficulty; //Enemy speed direction
+                int enemyRandomAsset = random.Next(2);
+                int reuseRandom = random.Next(2); // so not the same assets are being reused every time (a loop between dead enemies is generated once a few die)
+                if ((inactiveEnemies.Count > 0 && reuseRandom == 0) || inactiveEnemies.Count > 20) // ok after 20 enemies in the inactive bag, always reuse one
+                {
+                    Character enemy = inactiveEnemies.First();
+                    enemy.ResetChar(new int[] { xPos, player.position[1] }, 1, enemySpeed);
+                    enemies.Add(enemy);
+                    inactiveEnemies.Remove(enemy);
+                } else
+                {
+                    enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, enemySpeed, 150, new Animation(AssetsUtils.assets.enemiesWalkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesWalkLImages[enemyRandomAsset], true, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesAtkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesAtkLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation[] { },
+                    new Animation(AssetsUtils.assets.enemiesIdleRImages[enemyRandomAsset], AssetsUtils.assets.enemiesIdleLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesDeathRImages[enemyRandomAsset], AssetsUtils.assets.enemiesDeathLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0)));
+                }
             }
         }
 
         static void EnemyHitsPlayer() {
-            Character enemyHitsPlayer = enemies.Where(enemy => enemy.position[0] < player.position[0] + 35 && enemy.position[0] > player.position[0] - 35).FirstOrDefault();
+            Character enemyHitsPlayer = enemies.Where(enemy => enemy.position[0] < player.position[0] + 45 && enemy.position[0] > player.position[0] - 45).FirstOrDefault();
             if (enemyHitsPlayer != null && !playerHitted)
             {
                 player.GetHit();
                 enemyHitsPlayer.attack(enemyHitsPlayer.speed > 0);
                 playerHitted = true;
-                playerHittedTime = 700;
+                playerHittedTime = 600;
             }
 
             if (playerHitted)
             {
-                playerHittedTime -= delay;
+                playerHittedTime -= lastFrameTime;
                 if (playerHittedTime <= 0)
                 {
                     playerHitted = false;
@@ -313,7 +338,7 @@ namespace MyGame
                             //Draw enemies
                             enemy.Render();
                             //DEBUG POSITION
-                            Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
+                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
                         });
                         deadEnemies.ForEach(enemy =>
                         {
@@ -326,14 +351,17 @@ namespace MyGame
                             Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
                         });
                         //DEBUG SPAWNTIME
-                        Engine.DrawText("" + spawnTime, 0, 100, 0, 255, 0, fuente);
+                        //Engine.DrawText("" + spawnTime, 0, 100, 0, 255, 0, fuente);
                         //DEBUG COOLDOWN
-                        Engine.DrawText("" + player.position[0], player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
+                        //Engine.DrawText("" + cooldown, player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
 
                         RenderMeters();
 
-                        //DEBUG
-                        Engine.DrawText("|", player.position[0], player.position[1] , 0, 255, 0, fuente);
+                        //Draw Score
+                        Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, 300, 0, 0, 255, 0, fuente);
+
+                        //DEBUG lastFrameTime
+                        //Engine.DrawText("timeBetween: " + lastFrameTime, 0, 100 , 0, 255, 0, fuente);
 
                         if (tutorial)
                         {
@@ -352,6 +380,11 @@ namespace MyGame
                 case 2:
                     {
                         Engine.DrawText("Game over", 200, 400, 0, 255, 0, fuente);
+                        break;
+                    }
+                case 3:
+                    {
+                        Engine.DrawText("You Win!", 200, 400, 0, 255, 0, fuente);
                         break;
                     }
                 default:

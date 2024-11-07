@@ -26,7 +26,7 @@ namespace MyGame.Classes
             this.spritesCount = 0;
             this.loop = loop;
             this.animDuration = animDuration;
-            spritesRotationTime = animDuration / Program.delay / spritesRight.Length;
+            spritesRotationTime = animDuration / spritesRight.Length;
             this.offsetX = offsetX;
             this.offsetY = offsetY;
             this.rightDirection = rightDirection;
@@ -35,15 +35,15 @@ namespace MyGame.Classes
         public void resetAnimation() { 
             this.spritesCount = 0;
             this.rightDirection = true;
-            spritesRotationTime = animDuration / Program.delay / spritesRight.Length;
+            spritesRotationTime = animDuration / spritesRight.Length;
         }
 
         public bool Render(int x, int y) {
-            spritesRotationTime -= Program.delay;
+            spritesRotationTime -= Program.lastFrameTime;
             if (spritesRotationTime <= 0)
             {
                 spritesCount++;
-                spritesRotationTime = animDuration / Program.delay / spritesRight.Length;
+                spritesRotationTime = animDuration / spritesRight.Length;
             }
             if (spritesCount == spritesRight.Length)
             {
