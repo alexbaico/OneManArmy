@@ -4,60 +4,68 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Media;
 using Tao.Sdl;
+using NAudio;
+using NAudio.Wave;
 
 namespace MyGame
 {
 
     class Program
     {
-        static Random random = new Random();
-        static Image background = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
+        
+        public static Random random = new Random();
+        static int mouseX = 0;
+        static int mouseY = 0;
+
+        //Assets
+        static Image gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
+        /*static Image menuBackground = Engine.LoadImage("assets/backs/menuBackground.png");
+        static Image loseBackground = Engine.LoadImage("assets/backs/winBackground.png");
+        static Image winBackground = Engine.LoadImage("assets/backs/loseBackground.png");
+        */
+        static Font fuente;
+
+
         static Image[] meterL;
-        static int meterLCounter = 0;
         static Image[] meterR;
-        static int meterRCounter = 0;
         static Image[] meterLives;
+
+        //GameState vars (things updated during gameplay)
+        static int meterLCounter = 0;
+        static int meterRCounter = 0;
+        static int gameState = 0;
+        static int enemySpawnTime = 550;
+        static int cooldown = 0;
+        static bool pressed = false;
+        static bool playerHitted = false;
+        static int playerHittedTime = 1;
+        static int enemiesKillCount = 0;
 
         static DateTime lastTime = DateTime.Now;
         public static int lastFrameTime = 0;
 
-        static int delay = 10;
-        static int gameState = 0;
-
-        static int spawnTime = 2000;
-        static int enemySpawnTime = 550;
-        static int enemyBaseSpeed = 7;
-        static int difficulty = 2;
+        static Character enemyOnTheLeft = null;
+        static Character enemyOnTheRight = null;
 
         static Character player;
         static List<Character> enemies = new List<Character>();
         static List<Character> deadEnemies = new List<Character>();
         static List<Character> inactiveEnemies = new List<Character>();
 
-        static int distanceToPunch = 80;
 
+        //Game config (constants or configs of the game)
+        static int enemiesObjective = 100;
+        static int delay = 10;
+        static int spawnTime = 2000;
+        static int enemyBaseSpeed = 7;
+        static int distanceToPunch = 80;
         static int cooldownTime = 50;
         static int cooldownMissTime = 300;
-        static int cooldown = 0;
 
-        static Font fuente;
-        static int mouseX = 0;
-        static int mouseY = 0;
-
-        static bool pressed = false;
-
-        static int idleCounter = 0;
-        static Character enemyOnTheLeft = null;
-        static Character enemyOnTheRight = null;
-
-        static bool playerHitted = false;
-        static int playerHittedTime = 1;
-
+        //Gameplay options
         static bool tutorial = true;
-        static int enemiesObjective = 100;
-        static int enemiesKillCount = 0;
-
-
+        static int difficulty = 1;
+        static int gameMode = 1;
 
         static void Main(string[] args)
         {
@@ -66,7 +74,9 @@ namespace MyGame
             initializeMeters(out meterL, out meterR, out meterLives);
             initializePlayer();
 
-            fuente = Engine.LoadFont("assets/arial.ttf", 40);
+            AssetsUtils.PlayMenuMusic();
+
+            fuente = Engine.LoadFont("assets/Minecraft.ttf", 30);
 
             while (true)
             {
@@ -84,6 +94,7 @@ namespace MyGame
                 new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 200, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 400, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
 
+        //This are the bars that shows when you can hit an enemy / an enemy is in hit range
         private static void initializeMeters(out Image[] meterL, out Image[] meterR, out Image[] meterLives)
         {
             meterL = new Image[11];
@@ -103,58 +114,106 @@ namespace MyGame
         static void CheckInputs()
         {
 
+            //Change from menus pressing Space
             if (Engine.KeyPress(Engine.KEY_SPACE) && !pressed)
             {
                 if (gameState == 0)
                 {
+                    AssetsUtils.StopMenuMusic();
+                    AssetsUtils.PlayGameplayMusic();
                     gameState = 1;
                 }
                 if (gameState == 2 || gameState == 3)
                 {
+                    AssetsUtils.StopLoseMusic();
+                    AssetsUtils.StopWinMusic();
+                    AssetsUtils.PlayMenuMusic();
+
                     ResetGame();
                     gameState = 0;
                 }
-                pressed = true;
+                pressed = true; 
             }
-
+            
+            //Action keys
             if (cooldown <= 0 && player.lives > 0 && playerHittedTime - 200 < 0)
             {
                 if ((Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.MouseClick(Engine.MOUSE_LEFT, out mouseX, out mouseY)) && !pressed)
                 {
-                    PunchLeft();
+                    AttackLeft();
                     pressed = true;
                 }
 
                 if ((Engine.KeyPress(Engine.KEY_RIGHT) || Engine.KeyPress(Engine.KEY_D) || Engine.MouseClick(Engine.MOUSE_RIGHT, out mouseX, out mouseY)) && !pressed)
                 {
-                    PunchRight();
+                    AttackRight();
                     pressed = true;
                 }
-                if(!(Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.KeyPress(Engine.KEY_RIGHT) || Engine.KeyPress(Engine.KEY_D) || Engine.KeyPress(Engine.KEY_SPACE)))
-                {
-                    pressed = false;
-                }
+
             }
 
-            if (Engine.KeyPress(Engine.KEY_DOWN) || Engine.KeyPress(Engine.KEY_S))
+            //Press flag check
+            if (!(Engine.KeyPress(Engine.KEY_LEFT) || Engine.KeyPress(Engine.KEY_A) || Engine.KeyPress(Engine.KEY_RIGHT) || Engine.KeyPress(Engine.KEY_D) || Engine.KeyPress(Engine.KEY_SPACE) || Engine.KeyPress(Engine.KEY_T)))
             {
+                pressed = false;
             }
 
+            //Exit game
             if (Engine.KeyPress(Engine.KEY_ESC))
             {
                 Environment.Exit(0);
+            }
+
+            //Main menu options inputs
+            if (gameState == 0) {
+                if (Engine.KeyPress(Engine.KEY_1))
+                {
+                    difficulty = 1;
+                }
+                if (Engine.KeyPress(Engine.KEY_2))
+                {
+                    difficulty = 2;
+                }
+                if (Engine.KeyPress(Engine.KEY_3))
+                {
+                    difficulty = 3;
+                }
+                if (Engine.KeyPress(Engine.KEY_C))
+                {
+                    gameMode = 1;
+                }
+                if (Engine.KeyPress(Engine.KEY_I))
+                {
+                    gameMode = 2;
+                }
+                if (Engine.KeyPress(Engine.KEY_T) && !pressed)
+                {
+                    tutorial = !tutorial;
+                    pressed = true;
+                }
             }
         }
 
         private static void ResetGame()
         {
             enemies = new List<Character>();
+            deadEnemies = new List<Character>();
+            inactiveEnemies = new List<Character>();
+            player.currentAnimation = player.defaultAnimation;
+            player.defaultAnimation.spritesCount = 0;
             cooldown = 0;
             player.lives = 4;
             tutorial = true;
+            enemiesKillCount = 0;
+            pressed = false;
+            spawnTime = 2000;
+            enemySpawnTime = 550;
+            meterRCounter = 0;
+            meterLCounter = 0;
         }
 
-        private static void PunchRight()
+        //Attack right action
+        private static void AttackRight()
         {
             player.attack(true);
 
@@ -180,11 +239,14 @@ namespace MyGame
             }
             else
             {
+                AssetsUtils.assets.missSoundEffects[random.Next(5)].Play();
                 cooldown = cooldownMissTime;
             }
         }
 
-        private static void PunchLeft()
+
+        //Attack left action
+        private static void AttackLeft()
         {
 
             player.attack(false);
@@ -209,35 +271,42 @@ namespace MyGame
             else
             {
                 cooldown = cooldownMissTime;
+                AssetsUtils.assets.missSoundEffects[random.Next(5)].Play();
             }
         }
 
         static void Update()
         {
-            if(enemiesKillCount >= enemiesObjective)
-            {
-                gameState = 3;
+            if (gameState == 1) {
+
+                if (enemiesKillCount >= enemiesObjective && gameMode == 1)
+                {
+                    gameState = 3;
+
+                    AssetsUtils.StopGameplayMusic();
+                    AssetsUtils.PlayWinMusic();
+                }
+
+                lastFrameTime = (int)(DateTime.Now - lastTime).TotalMilliseconds;
+                lastTime = DateTime.Now;
+
+                inactiveEnemies.ForEach(enemy => deadEnemies.Remove(enemy));
+
+                enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
+                enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] < enemy.position[0]).FirstOrDefault();
+
+                SpawnEnemy();
+
+                MoveEnemies();
+            
+                EnemyHitsPlayer();
             }
 
-            lastFrameTime = (int)(DateTime.Now - lastTime).TotalMilliseconds;
-            lastTime = DateTime.Now;
-
-            inactiveEnemies.ForEach(enemy => deadEnemies.Remove(enemy));
-
-            enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
-            enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] < enemy.position[0]).FirstOrDefault();
-
-            SpawnEnemy();
-
-            MoveEnemies();
-            
-            EnemyHitsPlayer();
-           
         }
 
+        //Moving enemies
         private static void MoveEnemies()
         {
-            //Moving enemies
             if (player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
             {
                 enemies.ForEach(enemy =>
@@ -254,6 +323,7 @@ namespace MyGame
             }
         }
 
+        //Spawn enemy logic
         private static void SpawnEnemy()
         {
             if (cooldown > 0)
@@ -263,9 +333,10 @@ namespace MyGame
             if (spawnTime > 0)
                 spawnTime -= lastFrameTime;
 
-            /* random appearance logic condition here {}*/
+            /* spawn enemies when spawnTime reaches 0, player is alive. Stop spawning while tutorial messages are being shown */
             if (spawnTime <= 0 && player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
             {
+                /* random appearance condition logic */
                 spawnTime = enemySpawnTime + (random.Next(2) == 0 ? random.Next(150) : (random.Next(350) * -1)) - 50 * difficulty;
                 int xPos = random.Next(2) == 0 ? (0 - 100) : (1024 + 100);
                 if (tutorial && enemies.Count < 2)
@@ -280,8 +351,8 @@ namespace MyGame
                 }
                 int enemySpeed = enemyBaseSpeed / 2 * (xPos <= 0 ? 1 : -1) * difficulty; //Enemy speed direction
                 int enemyRandomAsset = random.Next(2);
-                int reuseRandom = random.Next(2); // so not the same assets are being reused every time (a loop between dead enemies is generated once a few die)
-                if ((inactiveEnemies.Count > 0 && reuseRandom == 0) || inactiveEnemies.Count > 20) // ok after 20 enemies in the inactive bag, always reuse one
+                int reuseRandom = random.Next(2); // So not the same assets are being reused every time (a loop between dead enemies is generated once a few die)
+                if ((inactiveEnemies.Count > 0 && reuseRandom == 0) || inactiveEnemies.Count > 20) // Ok... after 20 enemies in the inactive bag, always reuse one
                 {
                     Character enemy = inactiveEnemies.First();
                     enemy.ResetChar(new int[] { xPos, player.position[1] }, 1, enemySpeed);
@@ -295,11 +366,12 @@ namespace MyGame
             }
         }
 
+        //Player is hit by an enemy
         static void EnemyHitsPlayer() {
             Character enemyHitsPlayer = enemies.Where(enemy => enemy.position[0] < player.position[0] + 45 && enemy.position[0] > player.position[0] - 45).FirstOrDefault();
             if (enemyHitsPlayer != null && !playerHitted)
             {
-                player.GetHit();
+                player.GetHit(true);
                 enemyHitsPlayer.attack(enemyHitsPlayer.speed > 0);
                 playerHitted = true;
                 playerHittedTime = 600;
@@ -323,21 +395,24 @@ namespace MyGame
             {
                 case 1:
                     {
-                        Engine.Draw(background, 0, 0);
+                        Engine.Draw(gameplayBackgrounds, 0, 0);
                         //Draw player
                         bool playerRender = player.Render();
                         //Player dies
                         if (player.lives <= 0 && playerRender)
                         {
-                            //TODO STOP MOVEMENT
                             gameState = 2;
+                            AssetsUtils.StopGameplayMusic();
+                            AssetsUtils.PlayLoseMusic();
+
                         }
 
                         enemies.ForEach(enemy =>
                         {
                             //Draw enemies
                             enemy.Render();
-                            //DEBUG POSITION
+
+                            //DEBUG ENEMY POSITION
                             //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
                         });
                         deadEnemies.ForEach(enemy =>
@@ -346,32 +421,32 @@ namespace MyGame
                             if (enemy.Render()) {
                                 inactiveEnemies.Add(enemy);
                             }
-                            
-                            //DEBUG POSITION
-                            Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
+
+                            //DEBUG ENEMY POSITION
+                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
                         });
+
+                        RenderMeters();
+
+                        //Draw Score
+                        Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + (gameMode == 1 ? ""+enemiesObjective : "999999999... and many more"), 300, 0, 0, 255, 0, fuente);
+
+                        //DEBUG lastFrameTime
+                        //Engine.DrawText("timeBetween: " + lastFrameTime, 0, 100 , 0, 255, 0, fuente);
                         //DEBUG SPAWNTIME
                         //Engine.DrawText("" + spawnTime, 0, 100, 0, 255, 0, fuente);
                         //DEBUG COOLDOWN
                         //Engine.DrawText("" + cooldown, player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
 
-                        RenderMeters();
-
-                        //Draw Score
-                        Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, 300, 0, 0, 255, 0, fuente);
-
-                        //DEBUG lastFrameTime
-                        //Engine.DrawText("timeBetween: " + lastFrameTime, 0, 100 , 0, 255, 0, fuente);
-
                         if (tutorial)
                         {
                             if (enemyOnTheLeft != null)
                             {
-                                Engine.DrawText("Press A, <- or Left click to hit enemy", player.position[0], player.position[1] - 150, 0, 255, 0, fuente);
+                                Engine.DrawText("Press A, <- or Left click to hit enemy", player.position[0] - 150, player.position[1] - 50, 0, 255, 0, fuente);
                             }
                             if (enemyOnTheRight != null)
                             {
-                                Engine.DrawText("Press D, -> or Right click to hit enemy", player.position[0], player.position[1] - 150, 0, 255, 0, fuente);
+                                Engine.DrawText("Press D, -> or Right click to hit enemy", player.position[0] - 150, player.position[1] - 50, 0, 255, 0, fuente);
                             }
                         }
 
@@ -389,7 +464,19 @@ namespace MyGame
                     }
                 default:
                     {
-                        Engine.DrawText("Press space to start ", 200, 400, 0, 255, 0, fuente);
+                        //Engine.Draw(menuBackground, 0, 0);
+
+                        Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 20, 0, 255, 0, fuente);
+                        Engine.DrawText("Actual difficulty: " + difficulty, 100, 70, 0, 255, 0, fuente);
+
+                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 170, 0, 255, 0, fuente);
+                        Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 240, 0, 255, 0, fuente);
+
+                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 340, 0, 255, 0, fuente);
+                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 410, 0, 255, 0, fuente);
+
+
+                        Engine.DrawText("Press space to start ", 100, 470, 0, 255, 0, fuente);
                         break;
                     }
             }

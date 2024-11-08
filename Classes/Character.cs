@@ -78,15 +78,28 @@ namespace MyGame.Classes
             this.currentAnimation.spritesCount = 0;
         }
 
-        internal void GetHit()
+        internal void GetHit(bool isPlayer = false)
         {
             this.lives--;
             if (this.lives <= 0)
             {
                 currentAnimation = deathAnimation;
+                if (isPlayer) {
+                    AssetsUtils.assets.deathSoundEffects[Program.random.Next(2)].Play();
+
+                }
+                else
+                {
+                    AssetsUtils.assets.hitSoundEffects[Program.random.Next(5)].Play();
+                }
             } else
             {
                 currentAnimation = hitAnimation;
+                if (isPlayer)
+                {
+                    AssetsUtils.assets.painSoundEffects[Program.random.Next(5)].Play();
+                }
+               
             }
             this.currentAnimation.spritesCount = 0;
         }
