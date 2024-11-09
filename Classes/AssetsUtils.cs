@@ -48,8 +48,6 @@ namespace MyGame.Classes
             public SoundPlayer[] missSoundEffects;
             public SoundPlayer[] painSoundEffects;
             public SoundPlayer[] deathSoundEffects;
-
-
         }
 
         static AssetsUtils()
@@ -120,15 +118,7 @@ namespace MyGame.Classes
                     assets.enemiesAtkRImages[i - 1] = new Image[8];
                     assets.enemiesAtkLImages[i - 1] = new Image[8];
 
-                    //Initialize gameplay music
-                    /*
-                    assets.gameplayMusic[i - 1] = new WaveOut();
-                    Mp3FileReader fr = new Mp3FileReader("assets/sounds/music/gameplay/gameplay"+i+".mp3");
-                    assets.gameplayMusic[i - 1].Init(fr);
-                    */
                     assets.deathSoundEffects[i - 1] = new SoundPlayer("assets/sounds/death/death" + i + ".wav");
-                    //WaveFileReader wfr = new WaveFileReader("assets/sounds/death/death" + i + ".wav");
-                    //assets.deathSoundEffects[i - 1].Init(wfr);
 
 
                     for (int j = 1; j <= 4; j++)
@@ -154,16 +144,6 @@ namespace MyGame.Classes
                     }
                 }
 
-
-                if (i <= 3)
-                {/*
-                    //Initialize lose music
-                    assets.loseMusic[i - 1] = new WaveOut();
-                    Mp3FileReader fr = new Mp3FileReader("assets/sounds/music/lose/lose" + i + ".mp3");
-                    assets.loseMusic[i - 1].Init(fr);
-                    */
-                }
-
                 if (i <= 4)
                 {
                     assets.playerIdleRImages[i - 1] = Engine.LoadImage("assets/spearguy/default/idle" + "R" + i + ".png");
@@ -179,18 +159,12 @@ namespace MyGame.Classes
                     assets.playerAtkRImages[i + 3] = Engine.LoadImage("assets/spearguy/attack/spear" + "R" + (i + 3) + ".png");
                     assets.playerAtkLImages[i - 1] = Engine.LoadImage("assets/spearguy/attack/spear" + "L" + i + ".png");
                     assets.playerAtkLImages[i + 3] = Engine.LoadImage("assets/spearguy/attack/spear" + "L" + (i + 3) + ".png");
-
                 }
 
                 if (i <= 5)
                 {
                     assets.hitSoundEffects[i - 1] = new SoundPlayer("assets/sounds/hit/hit" + i + ".wav");
-                    //WaveFileReader wfr = new WaveFileReader("assets/sounds/hit/hit" + i + ".wav");
-                    //assets.hitSoundEffects[i - 1].Init(wfr);
-
                     assets.missSoundEffects[i - 1] = new SoundPlayer("assets/sounds/miss/miss" + i + ".wav");
-                    //wfr = new WaveFileReader("assets/sounds/miss/miss" + i + ".wav");
-                    //assets.missSoundEffects[i - 1].Init(wfr);
                 }
 
                 if (i <= 6)
@@ -201,10 +175,10 @@ namespace MyGame.Classes
 
                 assets.painSoundEffects[i - 1] = new SoundPlayer("assets/sounds/pain/pain" + i + ".wav");
 
-
             }
 
         }
+
         public static void PlayMenuMusic()
         {
             assets.menuMusicFR.Seek(0, SeekOrigin.Begin);

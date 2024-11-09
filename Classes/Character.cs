@@ -9,7 +9,6 @@ namespace MyGame.Classes
 
     internal class Character
     {
-
         public int[] position = new int[2];
         public int lives;
         public int speed;

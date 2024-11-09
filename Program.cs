@@ -41,6 +41,8 @@ namespace MyGame
         static int playerHittedTime = 1;
         static int enemiesKillCount = 0;
 
+        static DateTime startTime;
+
         static DateTime lastTime = DateTime.Now;
         public static int lastFrameTime = 0;
 
@@ -52,13 +54,15 @@ namespace MyGame
         static List<Character> deadEnemies = new List<Character>();
         static List<Character> inactiveEnemies = new List<Character>();
 
+        static int tutorialStep = 0;
+
 
         //Game config (constants or configs of the game)
         static int enemiesObjective = 100;
         static int delay = 10;
         static int spawnTime = 2000;
         static int enemyBaseSpeed = 7;
-        static int distanceToPunch = 80;
+        static int distanceToPunch = 175;
         static int cooldownTime = 50;
         static int cooldownMissTime = 300;
 
@@ -76,7 +80,7 @@ namespace MyGame
 
             AssetsUtils.PlayMenuMusic();
 
-            fuente = Engine.LoadFont("assets/Minecraft.ttf", 30);
+            fuente = Engine.LoadFont("assets/light_pixel-7.ttf", 25);
 
             while (true)
             {
@@ -89,8 +93,8 @@ namespace MyGame
 
         private static void initializePlayer()
         {
-            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -140, 70 }, 10, false) };
-            player = new Character(new int[] { 512, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
+            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -170, 86 }, 10, false) };
+            player = new Character(new int[] { 500, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
                 new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 200, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 400, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
 
@@ -117,11 +121,23 @@ namespace MyGame
             //Change from menus pressing Space
             if (Engine.KeyPress(Engine.KEY_SPACE) && !pressed)
             {
+                if (gameState == 1 && tutorial)
+                {
+                    if (tutorialStep == 0 || tutorialStep == 1 || tutorialStep == 2 || tutorialStep == 3)
+                    {
+                        tutorialStep++;
+                    }
+                }
+
                 if (gameState == 0)
                 {
                     AssetsUtils.StopMenuMusic();
                     AssetsUtils.PlayGameplayMusic();
                     gameState = 1;
+                    if (!tutorial)
+                    {
+                        startTime = DateTime.Now;
+                    }
                 }
                 if (gameState == 2 || gameState == 3)
                 {
@@ -132,6 +148,8 @@ namespace MyGame
                     ResetGame();
                     gameState = 0;
                 }
+
+
                 pressed = true; 
             }
             
@@ -203,13 +221,12 @@ namespace MyGame
             player.defaultAnimation.spritesCount = 0;
             cooldown = 0;
             player.lives = 4;
-            tutorial = true;
             enemiesKillCount = 0;
             pressed = false;
             spawnTime = 2000;
-            enemySpawnTime = 550;
             meterRCounter = 0;
             meterLCounter = 0;
+            tutorialStep = 0;
         }
 
         //Attack right action
@@ -235,6 +252,7 @@ namespace MyGame
                 if (tutorial)
                 {
                     tutorial = false;
+                    startTime = DateTime.Now;
                 }
             }
             else
@@ -292,8 +310,8 @@ namespace MyGame
 
                 inactiveEnemies.ForEach(enemy => deadEnemies.Remove(enemy));
 
-                enemyOnTheLeft = enemies.Where(enemy => player.position[0]  - distanceToPunch * 2 /*(WHY????)*/ < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
-                enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch + player.spriteMid > enemy.position[0] && player.position[0] < enemy.position[0]).FirstOrDefault();
+                enemyOnTheLeft = enemies.Where(enemy => player.position[0] - distanceToPunch < enemy.position[0] && player.position[0] > enemy.position[0]).FirstOrDefault();
+                enemyOnTheRight = enemies.Where(enemy => player.position[0]  + distanceToPunch > enemy.position[0] && player.position[0] < enemy.position[0]).FirstOrDefault();
 
                 SpawnEnemy();
 
@@ -307,7 +325,7 @@ namespace MyGame
         //Moving enemies
         private static void MoveEnemies()
         {
-            if (player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
+            if (player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null && tutorialStep != 0 && tutorialStep != 1 && tutorialStep != 2 && tutorialStep != 3)))
             {
                 enemies.ForEach(enemy =>
                 {
@@ -334,10 +352,10 @@ namespace MyGame
                 spawnTime -= lastFrameTime;
 
             /* spawn enemies when spawnTime reaches 0, player is alive. Stop spawning while tutorial messages are being shown */
-            if (spawnTime <= 0 && player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null)))
+            if (spawnTime <= 0 && player.lives > 0 && (!tutorial || (enemyOnTheLeft == null && enemyOnTheRight == null && tutorialStep != 0 && tutorialStep != 1 && tutorialStep != 2 && tutorialStep != 3)))
             {
                 /* random appearance condition logic */
-                spawnTime = enemySpawnTime + (random.Next(2) == 0 ? random.Next(150) : (random.Next(350) * -1)) - 50 * difficulty;
+                spawnTime = enemySpawnTime + (random.Next(2) == 0 ? random.Next(150) : (random.Next(250) * -1)) - 50 * difficulty;
                 int xPos = random.Next(2) == 0 ? (0 - 100) : (1024 + 100);
                 if (tutorial && enemies.Count < 2)
                 {
@@ -413,7 +431,7 @@ namespace MyGame
                             enemy.Render();
 
                             //DEBUG ENEMY POSITION
-                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
+                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 250, 185, 15, fuente);
                         });
                         deadEnemies.ForEach(enemy =>
                         {
@@ -423,60 +441,63 @@ namespace MyGame
                             }
 
                             //DEBUG ENEMY POSITION
-                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 0, 255, 0, fuente);
+                            //Engine.DrawText("" + enemy.position[0], enemy.position[0], enemy.position[1] - 80, 250, 185, 15, fuente);
                         });
 
                         RenderMeters();
 
-                        //Draw Score
-                        Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + (gameMode == 1 ? ""+enemiesObjective : "999999999... and many more"), 300, 0, 0, 255, 0, fuente);
+                        //Draw Score or Survived time
+                        if (gameMode == 1)
+                        {
+                            Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, 350, 10, 250, 185, 15, fuente);
+                        }
+                        else
+                        {
+                            TimeSpan timeSurvived = DateTime.Now - startTime;
+                            Engine.DrawText("Time survived: " + (tutorial ? "0:0:0" : (timeSurvived.Hours + ":" + timeSurvived.Minutes + ":" + timeSurvived.Seconds)), 350, 10, 250, 185, 15, fuente);
+                        }
 
                         //DEBUG lastFrameTime
-                        //Engine.DrawText("timeBetween: " + lastFrameTime, 0, 100 , 0, 255, 0, fuente);
+                        //Engine.DrawText("timeBetween: " + lastFrameTime, 0, 100 , 250, 185, 15, fuente);
                         //DEBUG SPAWNTIME
-                        //Engine.DrawText("" + spawnTime, 0, 100, 0, 255, 0, fuente);
+                        //Engine.DrawText("" + spawnTime, 0, 100, 250, 185, 15, fuente);
                         //DEBUG COOLDOWN
-                        //Engine.DrawText("" + cooldown, player.position[0], player.position[1] - 50, 0, 255, 0, fuente);
+                        //Engine.DrawText("" + cooldown, player.position[0], player.position[1] - 50, 250, 185, 15, fuente);
 
                         if (tutorial)
                         {
-                            if (enemyOnTheLeft != null)
-                            {
-                                Engine.DrawText("Press A, <- or Left click to hit enemy", player.position[0] - 150, player.position[1] - 50, 0, 255, 0, fuente);
-                            }
-                            if (enemyOnTheRight != null)
-                            {
-                                Engine.DrawText("Press D, -> or Right click to hit enemy", player.position[0] - 150, player.position[1] - 50, 0, 255, 0, fuente);
-                            }
+                            DrawTutorialMessages();
                         }
 
                         break;
                     }
                 case 2:
                     {
-                        Engine.DrawText("Game over", 200, 400, 0, 255, 0, fuente);
+                        Engine.DrawText("Game over", 350, 200, 250, 185, 15, fuente);
+                        Engine.DrawText("Press SPACE BAR to continue", 250, 350, 250, 185, 15, fuente);
                         break;
                     }
                 case 3:
                     {
-                        Engine.DrawText("You Win!", 200, 400, 0, 255, 0, fuente);
+                        Engine.DrawText("You Win!", 350, 200, 250, 185, 15, fuente);
+                        Engine.DrawText("Press SPACE BAR to continue", 250, 350, 250, 185, 15, fuente);
                         break;
                     }
                 default:
                     {
                         //Engine.Draw(menuBackground, 0, 0);
 
-                        Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 20, 0, 255, 0, fuente);
-                        Engine.DrawText("Actual difficulty: " + difficulty, 100, 70, 0, 255, 0, fuente);
+                        Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 20, 250, 185, 15, fuente);
+                        Engine.DrawText("Actual difficulty: " + difficulty, 100, 70, 250, 185, 15, fuente);
 
-                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 170, 0, 255, 0, fuente);
-                        Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 240, 0, 255, 0, fuente);
+                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 170, 250, 185, 15, fuente);
+                        Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 240, 250, 185, 15, fuente);
 
-                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 340, 0, 255, 0, fuente);
-                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 410, 0, 255, 0, fuente);
+                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 340, 250, 185, 15, fuente);
+                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 410, 250, 185, 15, fuente);
 
 
-                        Engine.DrawText("Press space to start ", 100, 470, 0, 255, 0, fuente);
+                        Engine.DrawText("Press space to start ", 100, 470, 250, 185, 15, fuente);
                         break;
                     }
             }
@@ -488,35 +509,107 @@ namespace MyGame
         {
             if (enemyOnTheRight != null)
             {
-                if (meterRCounter < 10)
-                {
-                    meterRCounter++;
-                }
-                Engine.Draw(meterR[meterRCounter], player.position[0] + 15 , player.position[1] + 75);
+                meterRCounter = 10;
+
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 75);
             }
             else
             {
-                meterRCounter = 0;
-                Engine.Draw(meterR[0], player.position[0] + 15, player.position[1] + 75);
+                if (meterRCounter > 0)
+                {
+                    meterRCounter--;
+                }
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 75);
 
             }
 
             if (enemyOnTheLeft != null)
             {
-                if (meterLCounter < 10)
-                {
-                    meterLCounter++;
-                }
-                Engine.Draw(meterL[meterLCounter], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 75);
+                meterLCounter = 10;
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 75);
+
             }
             else
             {
-                meterLCounter = 0;
-                Engine.Draw(meterL[0], player.position[0] - 128 /*meter widh*/ - 15, player.position[1] + 75);
+                if (meterLCounter > 0)
+                {
+                    meterLCounter--;
+                }
+
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 75);
             }
 
-            Engine.Draw(meterLives[player.lives], 0,0);
+            Engine.DrawText("HP ", 2, 10, 255, 0, 0, fuente);
+            Engine.Draw(meterLives[player.lives], 50, 5);
 
         }
+
+        private static void DrawTutorialMessages()
+        {
+            if (tutorialStep == 0)
+            {
+
+                Engine.DrawText("These bars represent your attack range", player.position[0] - 300, player.position[1] - 30, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+
+                Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
+            }
+
+            if (tutorialStep == 1)
+            {
+                Engine.DrawText("When the bars light up", player.position[0] - 200, player.position[1] - 60, 250, 185, 15, fuente);
+                Engine.DrawText("the enemies are in range to attack", player.position[0] - 300, player.position[1] - 30, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
+
+            }
+
+            if (tutorialStep == 2)
+            {
+                Engine.DrawText("Everytime you miss or attack before enemy is in range", player.position[0] - 440, player.position[1] - 180, 250, 185, 15, fuente);
+                Engine.DrawText("You get a longer cooldown on your attack", player.position[0] - 320, player.position[1] - 130, 250, 185, 15, fuente);
+                Engine.DrawText("So attack only when enemy is in range", player.position[0] - 270, player.position[1] - 80, 250, 185, 15, fuente);
+                Engine.DrawText("Or you could be hit by enemy", player.position[0] - 220, player.position[1] - 30, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 250, 250, 185, 15, fuente);
+            }
+            if (tutorialStep == 3)
+            {
+                Engine.DrawText("^", player.position[0] + 46, 50, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 50, 70, 250, 185, 15, fuente);
+                if (gameMode == 1)
+                {
+                    Engine.DrawText("Your objective is to kill " + enemiesObjective + " enemies", player.position[0] - 250, 120, 250, 185, 15, fuente);
+                }
+                else
+                {
+                    Engine.DrawText("In Infinite you try to survive as long as possible", player.position[0] - 300, 120, 250, 185, 15, fuente);
+                }
+                Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
+            }
+
+            if (tutorialStep == 4)
+            {
+                if (enemyOnTheLeft != null)
+                {
+                    Engine.DrawText("Press 'A', <- or Left click to attack enemy on the left", player.position[0] - 350, player.position[1] - 50, 250, 185, 15, fuente);
+                }
+                if (enemyOnTheRight != null)
+                {
+                    Engine.DrawText("Press 'D', -> or Right click to attack enemy on the right", player.position[0] - 350, player.position[1] - 50, 250, 185, 15, fuente);
+
+                }
+            }
+        }
+
     }
 }
