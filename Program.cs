@@ -13,16 +13,21 @@ namespace MyGame
     class Program
     {
         
+        static int screenWidth = 1024;
+        static int screenHeight = 1024;
+        static int gameplayScreenWidth = 1280;
+        static int gameplayScreenHeight = 689;
+
         public static Random random = new Random();
         static int mouseX = 0;
         static int mouseY = 0;
 
         //Assets
-        static Image gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
-        /*static Image menuBackground = Engine.LoadImage("assets/backs/menuBackground.png");
-        static Image loseBackground = Engine.LoadImage("assets/backs/winBackground.png");
-        static Image winBackground = Engine.LoadImage("assets/backs/loseBackground.png");
-        */
+        static Image gameplayBackgrounds;
+        static Image menuBackground = Engine.LoadImage("assets/backs/menu/menu.png");
+        static Image winBackground = Engine.LoadImage("assets/backs/win/win.png");
+        static Image loseBackground = Engine.LoadImage("assets/backs/lose/lose.png");
+        
         static Font fuente;
 
 
@@ -64,7 +69,7 @@ namespace MyGame
         static int enemyBaseSpeed = 7;
         static int distanceToPunch = 175;
         static int cooldownTime = 50;
-        static int cooldownMissTime = 300;
+        static int cooldownMissTime = 350;
 
         //Gameplay options
         static bool tutorial = true;
@@ -73,7 +78,7 @@ namespace MyGame
 
         static void Main(string[] args)
         {
-            Engine.Initialize();
+            Engine.Initialize(screenWidth, screenHeight);
 
             initializeMeters(out meterL, out meterR, out meterLives);
             initializePlayer();
@@ -81,6 +86,7 @@ namespace MyGame
             AssetsUtils.PlayMenuMusic();
 
             fuente = Engine.LoadFont("assets/light_pixel-7.ttf", 25);
+            gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
 
             while (true)
             {
@@ -94,7 +100,7 @@ namespace MyGame
         private static void initializePlayer()
         {
             Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -170, 86 }, 10, false) };
-            player = new Character(new int[] { 500, 425 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
+            player = new Character(new int[] { 650, 552 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
                 new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 200, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 400, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
 
@@ -134,6 +140,7 @@ namespace MyGame
                     AssetsUtils.StopMenuMusic();
                     AssetsUtils.PlayGameplayMusic();
                     gameState = 1;
+                    Engine.Initialize(gameplayScreenWidth, gameplayScreenHeight);
                     if (!tutorial)
                     {
                         startTime = DateTime.Now;
@@ -227,6 +234,7 @@ namespace MyGame
             meterRCounter = 0;
             meterLCounter = 0;
             tutorialStep = 0;
+            gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
         }
 
         //Attack right action
@@ -303,6 +311,7 @@ namespace MyGame
 
                     AssetsUtils.StopGameplayMusic();
                     AssetsUtils.PlayWinMusic();
+                    Engine.Initialize(screenWidth, screenHeight);
                 }
 
                 lastFrameTime = (int)(DateTime.Now - lastTime).TotalMilliseconds;
@@ -356,7 +365,7 @@ namespace MyGame
             {
                 /* random appearance condition logic */
                 spawnTime = enemySpawnTime + (random.Next(2) == 0 ? random.Next(150) : (random.Next(250) * -1)) - 50 * difficulty;
-                int xPos = random.Next(2) == 0 ? (0 - 100) : (1024 + 100);
+                int xPos = random.Next(2) == 0 ? (0 - 100) : (gameplayScreenWidth + 100);
                 if (tutorial && enemies.Count < 2)
                 {
                     if(enemies.Count < 1)
@@ -364,7 +373,7 @@ namespace MyGame
                         xPos = 0 - 100;
                     } else
                     {
-                        xPos = 1024 + 100;
+                        xPos = gameplayScreenWidth + 100;
                     }
                 }
                 int enemySpeed = enemyBaseSpeed / 2 * (xPos <= 0 ? 1 : -1) * difficulty; //Enemy speed direction
@@ -422,7 +431,7 @@ namespace MyGame
                             gameState = 2;
                             AssetsUtils.StopGameplayMusic();
                             AssetsUtils.PlayLoseMusic();
-
+                            Engine.Initialize(screenWidth, screenHeight);
                         }
 
                         enemies.ForEach(enemy =>
@@ -449,12 +458,15 @@ namespace MyGame
                         //Draw Score or Survived time
                         if (gameMode == 1)
                         {
-                            Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, 350, 10, 250, 185, 15, fuente);
+                            Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, player.position[0] - 100, 10, 250, 185, 15, fuente);
                         }
                         else
                         {
                             TimeSpan timeSurvived = DateTime.Now - startTime;
-                            Engine.DrawText("Time survived: " + (tutorial ? "0:0:0" : (timeSurvived.Hours + ":" + timeSurvived.Minutes + ":" + timeSurvived.Seconds)), 350, 10, 250, 185, 15, fuente);
+                            Engine.DrawText("Time survived: " + (tutorial ? "00:00:00" : 
+                                ((timeSurvived.Hours < 10 ? "0"+ timeSurvived.Hours : "" + timeSurvived.Hours) + ":" +
+                                (timeSurvived.Minutes < 10 ? "0" + timeSurvived.Minutes : ""+timeSurvived.Minutes) + ":" + 
+                                (timeSurvived.Seconds < 10 ? "0"+ timeSurvived.Seconds : "" + timeSurvived.Seconds))), player.position[0] - 100, 10, 250, 185, 15, fuente);
                         }
 
                         //DEBUG lastFrameTime
@@ -473,31 +485,31 @@ namespace MyGame
                     }
                 case 2:
                     {
-                        Engine.DrawText("Game over", 350, 200, 250, 185, 15, fuente);
-                        Engine.DrawText("Press SPACE BAR to continue", 250, 350, 250, 185, 15, fuente);
+                        Engine.Draw(loseBackground, 0, 0);
+                        Engine.DrawText("Press SPACE BAR to continue", 280, 770, 255, 55, 50, fuente);
                         break;
                     }
                 case 3:
                     {
-                        Engine.DrawText("You Win!", 350, 200, 250, 185, 15, fuente);
-                        Engine.DrawText("Press SPACE BAR to continue", 250, 350, 250, 185, 15, fuente);
+                        Engine.Draw(winBackground, 0, 0);
+                        Engine.DrawText("Press SPACE BAR to continue", 280, 870, 255, 55, 50, fuente);
                         break;
                     }
                 default:
                     {
-                        //Engine.Draw(menuBackground, 0, 0);
+                        Engine.Draw(menuBackground, 0, 0);
 
-                        Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 20, 250, 185, 15, fuente);
-                        Engine.DrawText("Actual difficulty: " + difficulty, 100, 70, 250, 185, 15, fuente);
+                        Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 420, 0, 0, 255, fuente);
+                        Engine.DrawText("Actual difficulty: " + difficulty, 100, 470, 255, 85, 51, fuente);
 
-                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 170, 250, 185, 15, fuente);
-                        Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 240, 250, 185, 15, fuente);
+                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 570, 0, 0, 0, fuente);
+                        Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 640, 66, 255, 51, fuente);
 
-                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 340, 250, 185, 15, fuente);
-                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 410, 250, 185, 15, fuente);
+                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 740, 66, 255, 51, fuente);
+                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 810, 0, 0, 0, fuente);
 
 
-                        Engine.DrawText("Press space to start ", 100, 470, 250, 185, 15, fuente);
+                        Engine.DrawText("Press space to start ", 100, 870, 250, 185, 15, fuente);
                         break;
                     }
             }
@@ -540,7 +552,7 @@ namespace MyGame
             }
 
             Engine.DrawText("HP ", 2, 10, 255, 0, 0, fuente);
-            Engine.Draw(meterLives[player.lives], 50, 5);
+            Engine.Draw(meterLives[player.lives], 50, 10);
 
         }
 
@@ -592,7 +604,7 @@ namespace MyGame
                 }
                 else
                 {
-                    Engine.DrawText("In Infinite you try to survive as long as possible", player.position[0] - 300, 120, 250, 185, 15, fuente);
+                    Engine.DrawText("In Infinite you try to survive as long as possible", player.position[0] - 400, 120, 250, 185, 15, fuente);
                 }
                 Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
             }
