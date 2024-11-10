@@ -14,6 +14,7 @@ namespace MyGame.Classes
     {
         public static Assets assets;
 
+
         public struct Assets {
             public Image[] playerIdleRImages;
             public Image[] playerIdleLImages;
@@ -48,6 +49,12 @@ namespace MyGame.Classes
             public SoundPlayer[] missSoundEffects;
             public SoundPlayer[] painSoundEffects;
             public SoundPlayer[] deathSoundEffects;
+
+
+            public Image[][] companionIdleImages;
+            public Image[] birdLImages;
+            public Image[] birdRImages;
+
         }
 
         static AssetsUtils()
@@ -64,14 +71,14 @@ namespace MyGame.Classes
             assets.playerAttkREffects = new Image[1][];
             assets.playerAttkLEffects = new Image[1][];
 
-            assets.enemiesIdleRImages = new Image[2][];
-            assets.enemiesIdleLImages = new Image[2][];
-            assets.enemiesDeathRImages = new Image[2][];
-            assets.enemiesDeathLImages = new Image[2][];
-            assets.enemiesWalkRImages = new Image[2][];
-            assets.enemiesWalkLImages = new Image[2][];
-            assets.enemiesAtkRImages = new Image[2][];
-            assets.enemiesAtkLImages = new Image[2][];
+            assets.enemiesIdleRImages = new Image[Program.enemiesAmount][];
+            assets.enemiesIdleLImages = new Image[Program.enemiesAmount][];
+            assets.enemiesDeathRImages = new Image[Program.enemiesAmount][];
+            assets.enemiesDeathLImages = new Image[Program.enemiesAmount][];
+            assets.enemiesWalkRImages = new Image[Program.enemiesAmount][];
+            assets.enemiesWalkLImages = new Image[Program.enemiesAmount][];
+            assets.enemiesAtkRImages = new Image[Program.enemiesAmount][];
+            assets.enemiesAtkLImages = new Image[Program.enemiesAmount][];
 
             assets.menuMusicFR = new Mp3FileReader("assets/sounds/music/menu/menu.mp3");
             assets.menuMusic = new WaveOut();
@@ -89,21 +96,38 @@ namespace MyGame.Classes
             assets.painSoundEffects = new SoundPlayer[8];
             assets.deathSoundEffects = new SoundPlayer[2];
 
+            assets.companionIdleImages = new Image[2][];
+            assets.birdLImages = new Image[4];
+            assets.birdRImages = new Image[4];
 
-            for(int i = 1; i <= 8; i++)
+            for (int i = 1; i <= 8; i++)
             {
                 if (i == 1)
                 {
                     assets.playerAttkREffects[i - 1] = new Image[8];
                     assets.playerAttkLEffects[i - 1] = new Image[8];
+
                     for (int j = 1; j <= 8; j++)
                     {
                         assets.playerAttkREffects[i - 1][j - 1] = Engine.LoadImage("assets/effects/atk1/atk" + "R" + j + ".png");
                         assets.playerAttkLEffects[i - 1][j - 1] = Engine.LoadImage("assets/effects/atk1/atk" + "L" + j + ".png");
                     }
+
+
                 }
 
                 if (i <= 2)
+                {
+                    assets.deathSoundEffects[i - 1] = new SoundPlayer("assets/sounds/death/death" + i + ".wav");
+
+                    assets.companionIdleImages[i - 1] = new Image[4];
+
+                    for (int j = 1; j <= 4; j++)
+                    {
+                        assets.companionIdleImages[i - 1][j - 1] = Engine.LoadImage("assets/animals/comp/animal"+i+"/idle" + j + ".png");
+                    }
+                }
+                if (i <= Program.enemiesAmount)
                 {
                     //enemies
                     assets.enemiesIdleRImages[i - 1] = new Image[4];
@@ -117,9 +141,6 @@ namespace MyGame.Classes
 
                     assets.enemiesAtkRImages[i - 1] = new Image[8];
                     assets.enemiesAtkLImages[i - 1] = new Image[8];
-
-                    assets.deathSoundEffects[i - 1] = new SoundPlayer("assets/sounds/death/death" + i + ".wav");
-
 
                     for (int j = 1; j <= 4; j++)
                     {
@@ -146,8 +167,8 @@ namespace MyGame.Classes
 
                 if (i <= 4)
                 {
-                    assets.playerIdleRImages[i - 1] = Engine.LoadImage("assets/spearguy/default/idle" + "R" + i + ".png");
-                    assets.playerIdleLImages[i - 1] = Engine.LoadImage("assets/spearguy/default/idle" + "L" + i + ".png");
+                    assets.playerIdleRImages[i - 1] = Engine.LoadImage("assets/spearguy/idle/idle" + "R" + i + ".png");
+                    assets.playerIdleLImages[i - 1] = Engine.LoadImage("assets/spearguy/idle/idle" + "L" + i + ".png");
                     assets.playerHitRImages[i - 1] = Engine.LoadImage("assets/spearguy/hit/hit" + "R" + i + ".png");
                     assets.playerHitLImages[i - 1] = Engine.LoadImage("assets/spearguy/hit/hit" + "L" + i + ".png");
 
@@ -159,6 +180,9 @@ namespace MyGame.Classes
                     assets.playerAtkRImages[i + 3] = Engine.LoadImage("assets/spearguy/attack/spear" + "R" + (i + 3) + ".png");
                     assets.playerAtkLImages[i - 1] = Engine.LoadImage("assets/spearguy/attack/spear" + "L" + i + ".png");
                     assets.playerAtkLImages[i + 3] = Engine.LoadImage("assets/spearguy/attack/spear" + "L" + (i + 3) + ".png");
+
+                    assets.birdLImages[i - 1] = Engine.LoadImage("assets/animals/bird/fly" + "L" + i + ".png");
+                    assets.birdRImages[i - 1] = Engine.LoadImage("assets/animals/bird/fly" + "R" + i + ".png");
                 }
 
                 if (i <= 5)

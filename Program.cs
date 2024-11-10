@@ -12,7 +12,7 @@ namespace MyGame
 
     class Program
     {
-        
+        //Program config vars
         static int screenWidth = 1024;
         static int screenHeight = 1024;
         static int gameplayScreenWidth = 1280;
@@ -22,6 +22,9 @@ namespace MyGame
         static int mouseX = 0;
         static int mouseY = 0;
 
+        public static int enemiesAmount = 5;
+
+
         //Assets
         static Image gameplayBackgrounds;
         static Image menuBackground = Engine.LoadImage("assets/backs/menu/menu.png");
@@ -29,7 +32,6 @@ namespace MyGame
         static Image loseBackground = Engine.LoadImage("assets/backs/lose/lose.png");
         
         static Font fuente;
-
 
         static Image[] meterL;
         static Image[] meterR;
@@ -45,6 +47,7 @@ namespace MyGame
         static bool playerHitted = false;
         static int playerHittedTime = 1;
         static int enemiesKillCount = 0;
+        static int birdSpawnTime = 3500;
 
         static DateTime startTime;
 
@@ -58,6 +61,8 @@ namespace MyGame
         static List<Character> enemies = new List<Character>();
         static List<Character> deadEnemies = new List<Character>();
         static List<Character> inactiveEnemies = new List<Character>();
+        static Animation companionIdle;
+        static List<Animation> birds;
 
         static int tutorialStep = 0;
 
@@ -82,6 +87,7 @@ namespace MyGame
 
             initializeMeters(out meterL, out meterR, out meterLives);
             initializePlayer();
+            initializeAnimals();
 
             AssetsUtils.PlayMenuMusic();
 
@@ -99,10 +105,17 @@ namespace MyGame
 
         private static void initializePlayer()
         {
-            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -170, 86 }, 10, false) };
-            player = new Character(new int[] { 650, 552 }, 4, 0, 150, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false), 
+            Animation[] attkEffects = new Animation[] { new Animation(AssetsUtils.assets.playerAttkREffects[0], AssetsUtils.assets.playerAttkLEffects[0], false, 200, new int[] { -170, 86 }, 90, false) };
+            player = new Character(new int[] { 640, 467 }, 4, 0, 160, new Animation(AssetsUtils.assets.playerIdleRImages, AssetsUtils.assets.playerIdleLImages, true, 600, new int[] { 0, 0 }, 0, false),
                 new Animation(AssetsUtils.assets.playerAtkRImages, AssetsUtils.assets.playerAtkLImages, false, 200, new int[] { 0, 0 }, 0, false), attkEffects, new Animation(AssetsUtils.assets.playerHitRImages, AssetsUtils.assets.playerHitLImages, false, 400, new int[] { 0, 0 }, 0, false), new Animation(AssetsUtils.assets.playerDeathRImages, AssetsUtils.assets.playerDeathLImages, false, 1000, new int[] { 0, 0 }, 0, false));
         }
+
+        private static void initializeAnimals()
+        {
+            int randomComp = random.Next(2);
+            companionIdle = new Animation(AssetsUtils.assets.companionIdleImages[randomComp], AssetsUtils.assets.companionIdleImages[randomComp], true, 500, new int[] { 20, 0 }, 60, false);
+            birds = new List<Animation>();
+         }
 
         //This are the bars that shows when you can hit an enemy / an enemy is in hit range
         private static void initializeMeters(out Image[] meterL, out Image[] meterR, out Image[] meterLives)
@@ -325,8 +338,13 @@ namespace MyGame
                 SpawnEnemy();
 
                 MoveEnemies();
-            
+
+                MoveBirds();
+
                 EnemyHitsPlayer();
+                
+                SpawnBird();
+
             }
 
         }
@@ -347,6 +365,32 @@ namespace MyGame
                         enemy.position[0] += enemy.speed;
                     }
                 });
+            }
+        }
+
+        //Spawning birds
+        private static void SpawnBird()
+        {
+            if (birdSpawnTime > 0) { 
+                birdSpawnTime -= lastFrameTime;
+                return;
+            }
+            int xPos = random.Next(2) == 0 ? (0 - 100) : (gameplayScreenWidth + 100);
+            birds.Add(new Animation(AssetsUtils.assets.birdRImages, AssetsUtils.assets.birdLImages, true, 400, new int[] { xPos, 0 }, 100 + (random.Next(50) * (random.Next(2) > 0 ? 1 : -1)), xPos < 0));
+            birdSpawnTime = 2500;
+        }
+
+        //Moving birds
+        private static void MoveBirds()
+        {
+            birds.ForEach(birdAnim =>
+            {
+                birdAnim.offsetX[0] += birdAnim.rightDirection ? 5 : -2; //For some reason, birds flying left direction are faster, lol
+            });
+            Animation birdtToRemove = birds.Where(bird => bird.offsetX[0] < - 200 || bird.offsetX[0] > gameplayScreenWidth + 200).FirstOrDefault(); ;
+            if (birdtToRemove != null)
+            {
+                birds.Remove(birdtToRemove);
             }
         }
 
@@ -377,7 +421,7 @@ namespace MyGame
                     }
                 }
                 int enemySpeed = enemyBaseSpeed / 2 * (xPos <= 0 ? 1 : -1) * difficulty; //Enemy speed direction
-                int enemyRandomAsset = random.Next(2);
+                int enemyRandomAsset = random.Next(enemiesAmount);
                 int reuseRandom = random.Next(2); // So not the same assets are being reused every time (a loop between dead enemies is generated once a few die)
                 if ((inactiveEnemies.Count > 0 && reuseRandom == 0) || inactiveEnemies.Count > 20) // Ok... after 20 enemies in the inactive bag, always reuse one
                 {
@@ -387,7 +431,7 @@ namespace MyGame
                     inactiveEnemies.Remove(enemy);
                 } else
                 {
-                    enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, enemySpeed, 150, new Animation(AssetsUtils.assets.enemiesWalkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesWalkLImages[enemyRandomAsset], true, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesAtkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesAtkLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation[] { },
+                    enemies.Add(new Character(new int[] { xPos, player.position[1] }, 1, enemySpeed, 160, new Animation(AssetsUtils.assets.enemiesWalkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesWalkLImages[enemyRandomAsset], true, difficulty == 1 ? 500 : difficulty == 2 ? 350 : 200, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesAtkRImages[enemyRandomAsset], AssetsUtils.assets.enemiesAtkLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation[] { },
                     new Animation(AssetsUtils.assets.enemiesIdleRImages[enemyRandomAsset], AssetsUtils.assets.enemiesIdleLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0), new Animation(AssetsUtils.assets.enemiesDeathRImages[enemyRandomAsset], AssetsUtils.assets.enemiesDeathLImages[enemyRandomAsset], false, 500, new int[] { 0, 0 }, 0, enemySpeed > 0)));
                 }
             }
@@ -425,6 +469,7 @@ namespace MyGame
                         Engine.Draw(gameplayBackgrounds, 0, 0);
                         //Draw player
                         bool playerRender = player.Render();
+                        companionIdle.Render(player.position[0], player.position[1]);
                         //Player dies
                         if (player.lives <= 0 && playerRender)
                         {
@@ -454,6 +499,8 @@ namespace MyGame
                         });
 
                         RenderMeters();
+
+                        RenderBirds();
 
                         //Draw Score or Survived time
                         if (gameMode == 1)
@@ -523,7 +570,7 @@ namespace MyGame
             {
                 meterRCounter = 10;
 
-                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 75);
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 155);
             }
             else
             {
@@ -531,14 +578,14 @@ namespace MyGame
                 {
                     meterRCounter--;
                 }
-                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 75);
+                Engine.Draw(meterR[meterRCounter], player.position[0] + 15, player.position[1] + 155);
 
             }
 
             if (enemyOnTheLeft != null)
             {
                 meterLCounter = 10;
-                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 75);
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 155);
 
             }
             else
@@ -548,7 +595,7 @@ namespace MyGame
                     meterLCounter--;
                 }
 
-                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 75);
+                Engine.Draw(meterL[meterLCounter], player.position[0] - 160 /*meter widh*/ - 15, player.position[1] + 155);
             }
 
             Engine.DrawText("HP ", 2, 10, 255, 0, 0, fuente);
@@ -556,42 +603,50 @@ namespace MyGame
 
         }
 
+        private static void RenderBirds()
+        {
+            birds.ForEach(bird =>
+            {
+                bird.Render(bird.offsetX[0], bird.offsetY);
+            });
+        }
+
         private static void DrawTutorialMessages()
         {
             if (tutorialStep == 0)
             {
 
-                Engine.DrawText("These bars represent your attack range", player.position[0] - 300, player.position[1] - 30, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("These bars represent your attack range", player.position[0] - 300, player.position[1] + 50, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 120, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 120, 250, 185, 15, fuente);
 
                 Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
             }
 
             if (tutorialStep == 1)
             {
-                Engine.DrawText("When the bars light up", player.position[0] - 200, player.position[1] - 60, 250, 185, 15, fuente);
-                Engine.DrawText("the enemies are in range to attack", player.position[0] - 300, player.position[1] - 30, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("When the bars light up", player.position[0] - 200, player.position[1] + 20, 250, 185, 15, fuente);
+                Engine.DrawText("the enemies are in range to attack", player.position[0] - 300, player.position[1] + 50, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 120, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 120, 250, 185, 15, fuente);
                 Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 200, 250, 185, 15, fuente);
 
             }
 
             if (tutorialStep == 2)
             {
-                Engine.DrawText("Everytime you miss or attack before enemy is in range", player.position[0] - 440, player.position[1] - 180, 250, 185, 15, fuente);
-                Engine.DrawText("You get a longer cooldown on your attack", player.position[0] - 320, player.position[1] - 130, 250, 185, 15, fuente);
-                Engine.DrawText("So attack only when enemy is in range", player.position[0] - 270, player.position[1] - 80, 250, 185, 15, fuente);
-                Engine.DrawText("Or you could be hit by enemy", player.position[0] - 220, player.position[1] - 30, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 40, 250, 185, 15, fuente);
-                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 10, 250, 185, 15, fuente);
-                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 40, 250, 185, 15, fuente);
+                Engine.DrawText("Everytime you miss or attack before enemy is in range", player.position[0] - 440, player.position[1] - 100, 250, 185, 15, fuente);
+                Engine.DrawText("You get a longer cooldown on your attack", player.position[0] - 320, player.position[1] - 50, 250, 185, 15, fuente);
+                Engine.DrawText("So attack only when enemy is in range", player.position[0] - 270, player.position[1] , 250, 185, 15, fuente);
+                Engine.DrawText("Or you could be hit by enemy", player.position[0] - 220, player.position[1] + 50, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] - 115, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] - 120, player.position[1] + 120, 250, 185, 15, fuente);
+                Engine.DrawText("|", player.position[0] + 92, player.position[1] + 90, 250, 185, 15, fuente);
+                Engine.DrawText("v", player.position[0] + 87, player.position[1] + 120, 250, 185, 15, fuente);
                 Engine.DrawText("Press SPACE BAR to continue", player.position[0] - 200, player.position[1] - 250, 250, 185, 15, fuente);
             }
             if (tutorialStep == 3)
