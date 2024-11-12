@@ -1,14 +1,8 @@
 ﻿using NAudio.Wave;
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Media;
-using System.Text;
-using System.Threading.Tasks;
-using static MyGame.Classes.AssetsUtils;
 
-namespace MyGame.Classes
+namespace OneManArmy.Classes
 {
     public static class AssetsUtils
     {
@@ -16,6 +10,10 @@ namespace MyGame.Classes
 
 
         public struct Assets {
+            public Image menuBackground;
+            public Image winBackground;
+            public Image loseBackground;
+
             public Image[] playerIdleRImages;
             public Image[] playerIdleLImages;
             public Image[] playerAtkRImages;
@@ -59,6 +57,10 @@ namespace MyGame.Classes
 
         static AssetsUtils()
         {
+            assets.menuBackground = Engine.LoadImage("assets/backs/menu/menu.png");
+            assets.winBackground = Engine.LoadImage("assets/backs/win/win.png");
+            assets.loseBackground = Engine.LoadImage("assets/backs/lose/lose.png");
+
             assets.playerIdleRImages = new Image[4];
             assets.playerIdleLImages = new Image[4];
             assets.playerHitRImages = new Image[4];
@@ -88,7 +90,7 @@ namespace MyGame.Classes
             assets.winMusic = new WaveOut();
 
             assets.gameplayMusic = new WaveOut();
-            assets.gameplayMusic.Volume = 0.6f;
+            assets.gameplayMusic.Volume = 0.5f;
             assets.loseMusic = new WaveOut();
 
             assets.hitSoundEffects = new SoundPlayer[5];

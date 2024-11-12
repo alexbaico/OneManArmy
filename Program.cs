@@ -1,13 +1,10 @@
-﻿using MyGame.Classes;
+﻿using OneManArmy.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Media;
 using Tao.Sdl;
-using NAudio;
-using NAudio.Wave;
 
-namespace MyGame
+namespace OneManArmy
 {
 
     class Program
@@ -26,10 +23,7 @@ namespace MyGame
 
 
         //Assets
-        static Image gameplayBackgrounds;
-        static Image menuBackground = Engine.LoadImage("assets/backs/menu/menu.png");
-        static Image winBackground = Engine.LoadImage("assets/backs/win/win.png");
-        static Image loseBackground = Engine.LoadImage("assets/backs/lose/lose.png");
+        static Image gameplayBackground;
         
         static Font fuente;
 
@@ -49,6 +43,7 @@ namespace MyGame
         static int enemiesKillCount = 0;
         static int birdSpawnTime = 3500;
 
+        static TimeSpan totalTimeSurvived;
         static DateTime startTime;
 
         static DateTime lastTime = DateTime.Now;
@@ -89,10 +84,10 @@ namespace MyGame
             initializePlayer();
             initializeAnimals();
 
-            AssetsUtils.PlayMenuMusic();
-
             fuente = Engine.LoadFont("assets/light_pixel-7.ttf", 25);
-            gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
+            gameplayBackground = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
+
+            AssetsUtils.PlayMenuMusic();
 
             while (true)
             {
@@ -247,7 +242,7 @@ namespace MyGame
             meterRCounter = 0;
             meterLCounter = 0;
             tutorialStep = 0;
-            gameplayBackgrounds = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
+            gameplayBackground = Engine.LoadImage("assets/backs/" + (random.Next(7) + 1) + ".jpg");
         }
 
         //Attack right action
@@ -318,6 +313,7 @@ namespace MyGame
         {
             if (gameState == 1) {
 
+                //Victory condition
                 if (enemiesKillCount >= enemiesObjective && gameMode == 1)
                 {
                     gameState = 3;
@@ -339,11 +335,11 @@ namespace MyGame
 
                 MoveEnemies();
 
+                SpawnBird();
+                
                 MoveBirds();
 
                 EnemyHitsPlayer();
-                
-                SpawnBird();
 
             }
 
@@ -466,7 +462,7 @@ namespace MyGame
             {
                 case 1:
                     {
-                        Engine.Draw(gameplayBackgrounds, 0, 0);
+                        Engine.Draw(gameplayBackground, 0, 0);
                         //Draw player
                         bool playerRender = player.Render();
                         companionIdle.Render(player.position[0], player.position[1]);
@@ -477,6 +473,7 @@ namespace MyGame
                             AssetsUtils.StopGameplayMusic();
                             AssetsUtils.PlayLoseMusic();
                             Engine.Initialize(screenWidth, screenHeight);
+                            totalTimeSurvived = DateTime.Now - startTime;
                         }
 
                         enemies.ForEach(enemy =>
@@ -505,7 +502,7 @@ namespace MyGame
                         //Draw Score or Survived time
                         if (gameMode == 1)
                         {
-                            Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, player.position[0] - 100, 10, 250, 185, 15, fuente);
+                            Engine.DrawText("Enemies killed: " + enemiesKillCount + " / " + enemiesObjective, player.position[0] - 130, 10, 250, 185, 15, fuente);
                         }
                         else
                         {
@@ -513,7 +510,7 @@ namespace MyGame
                             Engine.DrawText("Time survived: " + (tutorial ? "00:00:00" : 
                                 ((timeSurvived.Hours < 10 ? "0"+ timeSurvived.Hours : "" + timeSurvived.Hours) + ":" +
                                 (timeSurvived.Minutes < 10 ? "0" + timeSurvived.Minutes : ""+timeSurvived.Minutes) + ":" + 
-                                (timeSurvived.Seconds < 10 ? "0"+ timeSurvived.Seconds : "" + timeSurvived.Seconds))), player.position[0] - 100, 10, 250, 185, 15, fuente);
+                                (timeSurvived.Seconds < 10 ? "0"+ timeSurvived.Seconds : "" + timeSurvived.Seconds))), player.position[0] - 130, 10, 250, 185, 15, fuente);
                         }
 
                         //DEBUG lastFrameTime
@@ -532,31 +529,37 @@ namespace MyGame
                     }
                 case 2:
                     {
-                        Engine.Draw(loseBackground, 0, 0);
+                        Engine.Draw(AssetsUtils.assets.loseBackground, 0, 0);
+                        if(gameMode == 2) { 
+                        Engine.DrawText("You survived " +
+                            ((totalTimeSurvived.Hours < 10 ? "0" + totalTimeSurvived.Hours : "" + totalTimeSurvived.Hours) + ":" +
+                                (totalTimeSurvived.Minutes < 10 ? "0" + totalTimeSurvived.Minutes : "" + totalTimeSurvived.Minutes) + ":" +
+                                (totalTimeSurvived.Seconds < 10 ? "0" + totalTimeSurvived.Seconds : "" + totalTimeSurvived.Seconds)), 300, 670, 255, 55, 50, fuente);
+                        }
                         Engine.DrawText("Press SPACE BAR to continue", 280, 770, 255, 55, 50, fuente);
                         break;
                     }
                 case 3:
                     {
-                        Engine.Draw(winBackground, 0, 0);
+                        Engine.Draw(AssetsUtils.assets.winBackground, 0, 0);
                         Engine.DrawText("Press SPACE BAR to continue", 280, 870, 255, 55, 50, fuente);
                         break;
                     }
                 default:
                     {
-                        Engine.Draw(menuBackground, 0, 0);
+                        Engine.Draw(AssetsUtils.assets.menuBackground, 0, 0);
 
                         Engine.DrawText("Press 1, 2 or 3 to select difficulty", 100, 420, 0, 0, 255, fuente);
                         Engine.DrawText("Actual difficulty: " + difficulty, 100, 470, 255, 85, 51, fuente);
 
-                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 570, 0, 0, 0, fuente);
+                        Engine.DrawText("Press C for Classic mode or I for Infinite mode", 100, 570, 250, 185, 15, fuente);
                         Engine.DrawText("Actual game mode: " + (gameMode == 1 ? "Classic" : "Infinite"), 100, 640, 66, 255, 51, fuente);
 
-                        Engine.DrawText("Press T to activate / deactivate tutorial", 100, 740, 66, 255, 51, fuente);
-                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 810, 0, 0, 0, fuente);
+                        Engine.DrawText("Press T to activate / de-activate tutorial", 100, 740, 250, 185, 15, fuente);
+                        Engine.DrawText("Tutorial: " + (tutorial ? "On" : "Off"), 100, 810, 66, 255, 51, fuente);
 
 
-                        Engine.DrawText("Press space to start ", 100, 870, 250, 185, 15, fuente);
+                        Engine.DrawText("Press space to start ", 350, 900, 255, 0, 0, fuente);
                         break;
                     }
             }
